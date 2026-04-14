@@ -17,6 +17,12 @@ export default function CallOverlay() {
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
   const [isMuted, setIsMuted] = useState(false);
   const [currentCall, setCurrentCall] = useState<any>(null);
+  const [callError, setCallError] = useState<string | null>(null);
+
+  const showError = (msg: string) => {
+    setCallError(msg);
+    setTimeout(() => setCallError(null), 5000);
+  };
 
   // Listen for wake-up calls from Firestore
   useEffect(() => {
@@ -126,7 +132,7 @@ export default function CallOverlay() {
         setLocalStream(stream);
       } catch (err: any) {
         console.error('Failed to get local stream:', err);
-        alert("Ошибка микрофона: " + (err.message || "Нет доступа. Разрешите микрофон в настройках."));
+        showError("Ошибка микрофона: " + (err.message || "Нет доступа. Разрешите микрофон в настройках."));
         setCallState('idle');
         return;
       }
@@ -134,7 +140,7 @@ export default function CallOverlay() {
       try {
         if (peer) {
           if (peer.destroyed) {
-            alert("Соединение с сервером потеряно. Пожалуйста, перезагрузите приложение.");
+            showError("Соединение с сервером потеряно. Пожалуйста, перезагрузите приложение.");
             setCallState('idle');
             return;
           }
@@ -180,24 +186,24 @@ export default function CallOverlay() {
             call.on('error', (err: any) => {
               console.error('Call error:', err);
               if (err.type === 'peer-unavailable') {
-                alert('Собеседник не в сети или свернул приложение.');
+                showError('Собеседник не в сети или свернул приложение.');
               } else {
-                alert('Ошибка звонка: ' + err.message);
+                showError('Ошибка звонка: ' + err.message);
               }
               endCall();
             });
           } else {
             console.error("Failed to initiate call. Peer might be disconnected or target is invalid.");
-            alert("Не удалось начать звонок. Сервер звонков недоступен.");
+            showError("Не удалось начать звонок. Сервер звонков недоступен.");
             setCallState('idle');
           }
         } else {
-          alert("Инициализация звонка... Подождите пару секунд и попробуйте снова.");
+          showError("Инициализация звонка... Подождите пару секунд и попробуйте снова.");
           setCallState('idle');
         }
       } catch (err: any) {
         console.error('Failed to initiate call:', err);
-        alert("Ошибка соединения: " + (err.message || "Неизвестная ошибка"));
+        showError("Ошибка соединения: " + (err.message || "Неизвестная ошибка"));
         setCallState('idle');
       }
     };
@@ -230,12 +236,12 @@ export default function CallOverlay() {
       
       currentCall.on('error', (err: any) => {
         console.error('Call error:', err);
-        alert('Ошибка звонка: ' + err.message);
+        showError('Ошибка звонка: ' + err.message);
         endCall();
       });
     } catch (err: any) {
       console.error('Failed to get local stream', err);
-      alert("Ошибка микрофона: " + (err.message || "Нет доступа. Разрешите микрофон в настройках телефона для этого приложения."));
+      showError("Ошибка микрофона: " + (err.message || "Нет доступа. Разрешите микрофон в настройках телефона для этого приложения."));
       endCall();
     }
   };
@@ -291,6 +297,17 @@ export default function CallOverlay() {
               {callState === 'receiving' && 'Входящий звонок...'}
               {callState === 'connected' && 'Разговор'}
             </p>
+            
+            {callError && (
+              <motion.div 
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                className="mt-4 px-4 py-2 bg-danger/20 text-danger-foreground rounded-lg text-sm max-w-xs text-center"
+              >
+                {callError}
+              </motion.div>
+            )}
           </div>
 
           {/* Controls */}
