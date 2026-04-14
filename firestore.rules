@@ -1,0 +1,32 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Поскольку приложение использует кастомную систему токенов (вместо стандартных аккаунтов Firebase),
+    // мы разрешаем авторизованным (анонимно) пользователям читать и писать данные.
+    // Вся логика проверки токенов и прав доступа реализована на стороне клиента.
+
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated();
+      allow delete: if isAuthenticated();
+    }
+
+    match /adminTokens/{tokenId} {
+      allow read, create, update, delete: if isAuthenticated();
+    }
+
+    match /chats/{chatId} {
+      allow read, create, update, delete: if isAuthenticated();
+
+      match /messages/{messageId} {
+        allow read, create, delete: if isAuthenticated();
+      }
+    }
+  }
+}
